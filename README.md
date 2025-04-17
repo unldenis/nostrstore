@@ -1,5 +1,5 @@
 # Nostr DM
-Nostr DM is a lightweight and decentralized direct messaging application built on the Nostr protocol. It enables secure and private communication without relying on centralized servers. The project is designed to be simple, efficient, and privacy-focused, leveraging cryptographic techniques to ensure message confidentiality.
+Nostr DM is a lightweight and decentralized direct messaging application built on the [Nostr](https://github.com/nostr-protocol/nostr) protocol. It enables secure and private communication without relying on centralized servers. The project is designed to be simple, efficient, and privacy-focused, leveraging cryptographic techniques to ensure message confidentiality.
 
 ## Features
 - Decentralized messaging using the Nostr protocol.
