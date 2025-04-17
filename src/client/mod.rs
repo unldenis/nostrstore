@@ -1,12 +1,8 @@
-use std::collections::HashSet;
-use std::f32::consts::E;
-use std::sync::Arc;
-
+use tracing::{info, error, warn};
 use nostr_sdk::Keys;
 use nostr_sdk::prelude::*;
 use thiserror::Error;
 
-pub const NOSTR_DM_KIND: u16 = 43872;
 pub const NOSTR_EVENT_TAG : &str = "nostr-dm";
 
 
@@ -37,7 +33,11 @@ impl Default for Client {
 
 impl Client {
 
-    pub async fn send_event(&self, builder: EventBuilder) -> Result<(), ClientError> {
+    pub fn new(keys: Keys) -> Self {
+        Client { keys, relay_pool: None }
+    }
+
+    pub async fn send_event(&self, builder: EventBuilder) -> Result<EventId, ClientError> {
 
         match &self.relay_pool {
             Some(pool) => {
@@ -49,7 +49,7 @@ impl Client {
                 // println!("Sent to: {:?}", output.success);
                 // println!("Not sent to: {:?}", output.failed);
                 // println!("Sending event: {}", event.as_json());
-                Ok(())
+                Ok(*output.id())
             },
             None => {
                 Err(ClientError::NotConnected)
@@ -57,17 +57,30 @@ impl Client {
         }
     }
 
+    pub async fn broadcast(&self, message : &str) -> Result<EventId, ClientError> {
+        let builder = EventBuilder::text_note(message)
+        .tag(Tag::custom(TagKind::SingleLetter(SingleLetterTag { character: Alphabet::C, uppercase: false }),
+        vec![NOSTR_EVENT_TAG.to_string()])) ;
+
+        self.send_event(builder).await
+    }
+
     
     pub async fn connect(self : &mut Client) -> Result<(), nostr_sdk::client::Error> {
-
-        // Create a relay pool with some test relays
         let relay_pool = RelayPool::new();
-        // relay_pool
-        //     .add_relay("wss://relay.nostr.net", RelayOptions::default())
-        //     .await?;
+ 
+        let relays = vec![
+            "wss://nos.lol",
+            "wss://relay.damus.io",
+            "wss://nostr-pub.wellorder.net",
+            "wss://relay.nostr.band",
+        ];
+        
+        for url in relays {
+            relay_pool.add_relay(url, RelayOptions::default()).await?;
+        }
+    
 
-        relay_pool.add_relay("wss://nos.lol", RelayOptions::default())
-            .await?;
         relay_pool.connect().await;  
  
 
@@ -92,10 +105,8 @@ impl Client {
     
         let mut notifications = pool.notifications();
 
-        let keysCloned = self.keys.clone();
+        let keys_cloned = self.keys.clone();
         tokio::spawn(async move {
-            // let mut seen_events = HashSet::new();
-
            loop {
                 let (event, relay_url) = match notifications.recv().await {
                     Ok(RelayPoolNotification::Event {
@@ -105,22 +116,18 @@ impl Client {
                     _ => continue,
                 };
 
-                if event.pubkey == keysCloned.public_key() {
-                    // log::trace!("Ignoring event from self");
+                if event.pubkey == keys_cloned.public_key() {
+                    info!("Ignoring event from self");
                     continue;
                 }
             
-                // if !seen_events.insert(event.id) {
-                //     continue;
-                // }
 
                 if !event.verify_signature() {
-                    println!("Invalid signature for event id: {:?}", event.id);
+                    warn!("Invalid signature for event id: {:?}", event.id);
                     continue;
                 }
             
-                println!("📥 Received event:\n{}", event.as_json());
-
+                info!("Received event:\n{}", event.as_json());
             }
             
         });

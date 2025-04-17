@@ -1,47 +1,54 @@
+use core::error;
 use std::io;
 
 use client::{ClientError, NOSTR_EVENT_TAG};
 use nostr_sdk::prelude::*;
+use tracing::info;
+use tracing::error;
+use tracing_subscriber;
 
 mod client;
 use crate::client::Client;
 
 #[tokio::main]
 async fn main() {
-    println!("Hello, world!");
+    // install global collector configured based on RUST_LOG env var.
+    tracing_subscriber::fmt::init();
+    println!("hello world println");
+    info!("hello world info");
 
-    let mut client = Client::default();
+    let keys = Keys::parse("nsec1ytvz5cdxfhuj4jg9k47kf9jfecfg8cwgjd5tnygj8cl7l8mc8ljqk7ac7q").unwrap();
+
+    let mut client = Client::new(keys);
 
     client.connect().await.unwrap();
 
 
-    println!("Listening for events...");
+    info!("Listening for events...");
     client.subscribe_and_listen().await.unwrap();
 
     loop {
         let mut input = String::new();
-        print!(">");
+        // print!(">");
         io::stdin().read_line(&mut input).unwrap();
         if input.trim() == "" {
             break;
         }
 
-        let builder = EventBuilder::text_note(input)
-        .tag(Tag::custom(TagKind::SingleLetter(SingleLetterTag { character: Alphabet::C, uppercase: false }),
-        vec![NOSTR_EVENT_TAG.to_string()])) ;
+        let broadcast_res = client.broadcast(&input).await;
         // .tag(Tag::from_standardized(TagStandard::Client{ name: NOSTR_EVENT_TAG.to_string(), address: None, }));
 
-        match client.send_event(builder).await {
-            Ok(_) => {
-
+        match broadcast_res {
+            Ok(event_id) => {
+                info!("Event ID: {}", event_id.to_bech32().unwrap_or("invalid output id".into()));
             },
             Err(error) => {
                 match error {
                     ClientError::NostrError(e) => {
-                        println!("{}", e);
+                        error!("{}", e);
                     },
                     ClientError::NotConnected => {
-                        println!("{}", error);
+                        error!("{}", error);
                     },
                 }
             },
