@@ -7,10 +7,21 @@ use serde::{Serialize, Deserialize};
 pub const NOSTR_EVENT_TAG : &str = "nostr-dm";
 pub const NOSTR_VERSION : &str = "0.1.0";
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChatMessage {
-    pub message: String,
+    pub message: String,              // Can be plaintext or encrypted
     pub version: String,
+    pub recipient: Option<PublicKey> // If Some, encrypt `message` field
+}
+
+impl ChatMessage {
+    pub fn new(message: String, recipient: Option<PublicKey>) -> Self {
+        ChatMessage {
+            message: message,
+            version: NOSTR_VERSION.to_string(),
+            recipient,
+        }
+    }
 }
 
 
@@ -49,6 +60,34 @@ impl Client {
         Client { keys, relay_pool: None }
     }
 
+    pub async fn send_chat_message(&self, mut chat_msg: ChatMessage) -> Result<EventId, ClientError> {
+        if let Some(recipient) = &chat_msg.recipient {
+            let encrypted_msg = self
+                .keys
+                .nip44_encrypt(recipient, &chat_msg.message)
+                .await
+                .map_err(|e| ClientError::NostrError(e.to_string()))?;
+            
+            chat_msg.message = encrypted_msg;
+        }
+    
+        let json = serde_json::to_string(&chat_msg)
+            .map_err(|e| ClientError::SerdeError(e.to_string()))?;
+    
+        let builder = EventBuilder::text_note(json)
+            .tag(Tag::custom(
+                TagKind::SingleLetter(SingleLetterTag {
+                    character: Alphabet::C,
+                    uppercase: false,
+                }),
+                vec![NOSTR_EVENT_TAG.to_string()],
+            ));
+    
+        self.send_event(builder).await
+    }
+    
+
+
     pub async fn send_event(&self, builder: EventBuilder) -> Result<EventId, ClientError> {
 
         match &self.relay_pool {
@@ -57,10 +96,6 @@ impl Client {
 
                 let output =  pool.send_event(&event).await.map_err(|e| ClientError::NostrError(e.to_string()))?;
         
-                // println!("Event ID: {}", output.id().to_bech32().unwrap_or("invalid output id".into()));
-                // println!("Sent to: {:?}", output.success);
-                // println!("Not sent to: {:?}", output.failed);
-                // println!("Sending event: {}", event.as_json());
                 Ok(*output.id())
             },
             None => {
@@ -69,48 +104,6 @@ impl Client {
         }
     }
 
-    pub async fn broadcast(&self, message : &str) -> Result<EventId, ClientError> {
-        let chat_msg = ChatMessage {
-            message: message.to_string(),
-            version: NOSTR_VERSION.to_string(),
-        };
-
-        let json = serde_json::to_string(&chat_msg).map_err(|e| ClientError::SerdeError(e.to_string()))?;
-
-        let builder = EventBuilder::text_note(json)
-        .tag(Tag::custom(TagKind::SingleLetter(SingleLetterTag { character: Alphabet::C, uppercase: false }),
-        vec![NOSTR_EVENT_TAG.to_string()])) ;
-
-        self.send_event(builder).await
-    }
-
-    pub async fn send_encrypted_message(
-        &self,
-        recipient_pubkey: &PublicKey,
-        message: &str,
-    ) -> Result<EventId, ClientError> {
-        let chat_msg = ChatMessage {
-            message: message.to_string(),
-            version: NOSTR_VERSION.to_string(),
-        };
-    
-        let json = serde_json::to_string(&chat_msg)
-            .map_err(|e| ClientError::SerdeError(e.to_string()))?;
-    
-        let encrypted_content = self
-            .keys
-            .nip44_encrypt(recipient_pubkey, &json)
-            .await
-            .map_err(|e| ClientError::NostrError(e.to_string()))?;
-
-            // .map_err(|e| ClientError::NostrError(e.to_string()))?;
-    
-        let builder = EventBuilder::text_note(encrypted_content)
-            .tag(Tag::custom(TagKind::SingleLetter(SingleLetterTag { character: Alphabet::C, uppercase: false }),
-            vec![NOSTR_EVENT_TAG.to_string()])) ;
-        self.send_event(builder).await
-    }
-    
 
     
     pub async fn connect(self : &mut Client) -> Result<(), nostr_sdk::client::Error> {
@@ -171,26 +164,37 @@ impl Client {
                         }
     
 
-                        match keys_cloned.nip44_decrypt(&event.pubkey, &event.content).await {
-                            Ok(decrypted_json) => {
-                                match serde_json::from_str::<ChatMessage>(&decrypted_json) {
-                                    Ok(chat_message) => {
-                                        if chat_message.version != NOSTR_VERSION {
-                                            warn!("Version mismatch: expected {}, got {}", NOSTR_VERSION, chat_message.version);
-                                            return;
+                        match serde_json::from_str::<ChatMessage>(&event.content) {
+                            Ok(mut chat_msg) => {
+                                if chat_msg.version != NOSTR_VERSION {
+                                    warn!("Version mismatch: expected {}, got {}", NOSTR_VERSION, chat_msg.version);
+                                    return;
+                                }
+                        
+                                if let Some(_) = &chat_msg.recipient {
+                                    // Try to decrypt only the `message` field
+                                    match keys_cloned.nip44_decrypt(&event.pubkey, &chat_msg.message).await {
+                                        Ok(decrypted_msg) => {
+                                            chat_msg.message = decrypted_msg;
+                                            on_event(chat_msg, *event, relay_url);
                                         }
-                                        on_event(chat_message, *event, relay_url);
+                                        Err(e) => {
+                                            warn!(
+                                                "Failed to decrypt field `message` from {}: {}",
+                                                event.pubkey.to_bech32().unwrap_or_else(|_| "<invalid>".into()),
+                                                e
+                                            );
+                                        }
                                     }
-                                    Err(e) => {
-                                        warn!("Failed to parse decrypted JSON: {}", e);
-                                    }
+                                } else {
+                                    // No decryption needed
+                                    on_event(chat_msg, *event, relay_url);
                                 }
                             }
                             Err(e) => {
-                                warn!("Failed to decrypt message from {}: {}", event.pubkey.to_bech32().unwrap(), e);
+                                // warn!("Failed to parse ChatMessage JSON: {}", e);
                             }
-                        }
-                                       
+                        }                                      
 
                     },
                     Ok(RelayPoolNotification::Shutdown) => break,

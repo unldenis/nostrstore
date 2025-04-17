@@ -2,6 +2,7 @@ use core::error;
 use std::env;
 use std::io;
 
+use client::ChatMessage;
 use client::{ClientError, NOSTR_EVENT_TAG};
 use dotenv::dotenv;
 use nostr_sdk::prelude::*;
@@ -35,7 +36,17 @@ async fn main() {
 
     info!("Listening for events...");
     client.subscribe_and_listen(|chat_message, event: Event, relay_url| {
-        info!("Relay {}, User {}\n{}", relay_url, event.pubkey.to_bech32().unwrap(), chat_message.message);
+
+        match chat_message.recipient {
+            Some(recipient) => {
+                info!("[Private] User {} :\n{}", event.pubkey.to_bech32().unwrap(), chat_message.message);
+            },
+            None => {
+                info!("[Public] User {} :\n{}", event.pubkey.to_bech32().unwrap(), chat_message.message);
+           
+                // info!("[Public] Relay {}, User {}\n{}", relay_url, event.pubkey.to_bech32().unwrap(), chat_message.message);
+            },
+        }
     }).await.unwrap();
     
     loop {
@@ -46,7 +57,8 @@ async fn main() {
             break;
         }
 
-        let broadcast_res = client.broadcast(input.trim()).await;
+        let broadcast_res = client.send_chat_message(
+            ChatMessage::new(input.trim().to_owned(), None)).await;
         // .tag(Tag::from_standardized(TagStandard::Client{ name: NOSTR_EVENT_TAG.to_string(), address: None, }));
 
         match broadcast_res {
