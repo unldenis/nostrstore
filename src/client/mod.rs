@@ -2,8 +2,16 @@ use tracing::{info, error, warn};
 use nostr_sdk::Keys;
 use nostr_sdk::prelude::*;
 use thiserror::Error;
+use serde::{Serialize, Deserialize};
 
 pub const NOSTR_EVENT_TAG : &str = "nostr-dm";
+pub const NOSTR_VERSION : &str = "0.1.0";
+
+#[derive(Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub message: String,
+    pub version: String,
+}
 
 
 #[derive(Error, Debug)]
@@ -14,6 +22,10 @@ pub enum ClientError {
     // if error is from nostr_sdk 
     #[error("nostr_sdk error: {0}")]
     NostrError(String),
+
+    // if error is from serde 
+    #[error("serde error: {0}")]
+    SerdeError(String)
 }
 
 pub struct Client {
@@ -58,7 +70,14 @@ impl Client {
     }
 
     pub async fn broadcast(&self, message : &str) -> Result<EventId, ClientError> {
-        let builder = EventBuilder::text_note(message)
+        let chat_msg = ChatMessage {
+            message: message.to_string(),
+            version: NOSTR_VERSION.to_string(),
+        };
+
+        let json = serde_json::to_string(&chat_msg).map_err(|e| ClientError::SerdeError(e.to_string()))?;
+
+        let builder = EventBuilder::text_note(json)
         .tag(Tag::custom(TagKind::SingleLetter(SingleLetterTag { character: Alphabet::C, uppercase: false }),
         vec![NOSTR_EVENT_TAG.to_string()])) ;
 
@@ -91,7 +110,7 @@ impl Client {
  
     pub async fn subscribe_and_listen<F>(&self, mut on_event: F) -> Result<(), ClientError>
     where
-        F: FnMut(Event, RelayUrl) + Send + 'static,
+        F: FnMut(ChatMessage, Event, RelayUrl) + Send + 'static,
     {
         let pool = match &self.relay_pool {
             Some(p) => p,
@@ -123,7 +142,21 @@ impl Client {
                             continue;
                         }
     
-                        on_event(*event, relay_url);
+
+                        // deserialize version
+                        match serde_json::from_str::<ChatMessage>(&event.content) {
+                            Ok(chat_message) => {
+                                if chat_message.version != NOSTR_VERSION {
+                                    // warn!("Version mismatch: expected {}, got {}", NOSTR_VERSION, parsed.version);
+                                    continue;
+                                }
+                                on_event(chat_message, *event, relay_url);
+                            }
+                            Err(_) => {
+                                // warn!("Received invalid JSON: {}", event.content);
+                            }
+                        }                        
+
                     },
                     Ok(RelayPoolNotification::Shutdown) => break,
                     _ => continue,
