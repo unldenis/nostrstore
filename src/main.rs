@@ -1,7 +1,9 @@
 use core::error;
+use std::env;
 use std::io;
 
 use client::{ClientError, NOSTR_EVENT_TAG};
+use dotenv::dotenv;
 use nostr_sdk::prelude::*;
 use tracing::info;
 use tracing::error;
@@ -17,8 +19,12 @@ async fn main() {
     // install global collector configured based on RUST_LOG env var.
     tracing_subscriber::fmt::init();
 
-    // let keys = Keys::parse("nsec1ytvz5cdxfhuj4jg9k47kf9jfecfg8cwgjd5tnygj8cl7l8mc8ljqk7ac7q").unwrap();
-    let keys = load_or_generate_keys().await.unwrap();
+    dotenv().unwrap(); // Reads the .env file
+
+    let keys = match env::var("SEC_KEY") {
+        Ok(val) => Keys::parse(&val).unwrap(),
+        Err(_) => load_or_generate_keys().await.unwrap(),
+    };
 
     info!("Your public key: {}", keys.public_key().to_bech32().unwrap());
 
@@ -28,7 +34,7 @@ async fn main() {
 
 
     info!("Listening for events...");
-    client.subscribe_and_listen(|chat_message, event, relay_url| {
+    client.subscribe_and_listen(|chat_message, event: Event, relay_url| {
         info!("Relay {}, User {}\n{}", relay_url, event.pubkey.to_bech32().unwrap(), chat_message.message);
     }).await.unwrap();
     
