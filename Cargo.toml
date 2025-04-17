@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 dirs = "5.0"            # home directory cross-platform
-nostr-sdk = "0.40"
+nostr-sdk = { version = "0.40", features = ["nip44"] }
 thiserror = "2.0.12"
 tokio =  { version = "1.44.2", features = ["fs"] }
 

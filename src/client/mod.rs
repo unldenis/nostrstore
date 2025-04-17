@@ -84,6 +84,34 @@ impl Client {
         self.send_event(builder).await
     }
 
+    pub async fn send_encrypted_message(
+        &self,
+        recipient_pubkey: &PublicKey,
+        message: &str,
+    ) -> Result<EventId, ClientError> {
+        let chat_msg = ChatMessage {
+            message: message.to_string(),
+            version: NOSTR_VERSION.to_string(),
+        };
+    
+        let json = serde_json::to_string(&chat_msg)
+            .map_err(|e| ClientError::SerdeError(e.to_string()))?;
+    
+        let encrypted_content = self
+            .keys
+            .nip44_encrypt(recipient_pubkey, &json)
+            .await
+            .map_err(|e| ClientError::NostrError(e.to_string()))?;
+
+            // .map_err(|e| ClientError::NostrError(e.to_string()))?;
+    
+        let builder = EventBuilder::text_note(encrypted_content)
+            .tag(Tag::custom(TagKind::SingleLetter(SingleLetterTag { character: Alphabet::C, uppercase: false }),
+            vec![NOSTR_EVENT_TAG.to_string()])) ;
+        self.send_event(builder).await
+    }
+    
+
     
     pub async fn connect(self : &mut Client) -> Result<(), nostr_sdk::client::Error> {
         let relay_pool = RelayPool::new();
@@ -143,19 +171,26 @@ impl Client {
                         }
     
 
-                        // deserialize version
-                        match serde_json::from_str::<ChatMessage>(&event.content) {
-                            Ok(chat_message) => {
-                                if chat_message.version != NOSTR_VERSION {
-                                    // warn!("Version mismatch: expected {}, got {}", NOSTR_VERSION, parsed.version);
-                                    continue;
+                        match keys_cloned.nip44_decrypt(&event.pubkey, &event.content).await {
+                            Ok(decrypted_json) => {
+                                match serde_json::from_str::<ChatMessage>(&decrypted_json) {
+                                    Ok(chat_message) => {
+                                        if chat_message.version != NOSTR_VERSION {
+                                            warn!("Version mismatch: expected {}, got {}", NOSTR_VERSION, chat_message.version);
+                                            return;
+                                        }
+                                        on_event(chat_message, *event, relay_url);
+                                    }
+                                    Err(e) => {
+                                        warn!("Failed to parse decrypted JSON: {}", e);
+                                    }
                                 }
-                                on_event(chat_message, *event, relay_url);
                             }
-                            Err(_) => {
-                                // warn!("Received invalid JSON: {}", event.content);
+                            Err(e) => {
+                                warn!("Failed to decrypt message from {}: {}", event.pubkey.to_bech32().unwrap(), e);
                             }
-                        }                        
+                        }
+                                       
 
                     },
                     Ok(RelayPoolNotification::Shutdown) => break,
