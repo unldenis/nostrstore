@@ -20,6 +20,8 @@ async fn main() {
     // let keys = Keys::parse("nsec1ytvz5cdxfhuj4jg9k47kf9jfecfg8cwgjd5tnygj8cl7l8mc8ljqk7ac7q").unwrap();
     let keys = load_or_generate_keys().await.unwrap();
 
+    info!("Your public key: {}", keys.public_key().to_bech32().unwrap());
+
     let mut client = Client::new(keys);
 
     client.connect().await.unwrap();
