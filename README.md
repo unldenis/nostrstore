@@ -3,6 +3,3 @@ Nostr DM is an experimental direct messaging application built on the [Nostr](ht
 
 ## Status
 Work in progress. Features and functionality are subject to change as development continues.
-
-## License
-This project is licensed under the [MIT License](https://opensource.org/licenses/MIT).
