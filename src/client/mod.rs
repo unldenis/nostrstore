@@ -88,50 +88,50 @@ impl Client {
         Ok(())
     }
 
-
-    pub async fn subscribe_and_listen(&self) -> Result<(), ClientError> {
+ 
+    pub async fn subscribe_and_listen<F>(&self, mut on_event: F) -> Result<(), ClientError>
+    where
+        F: FnMut(Event, RelayUrl) + Send + 'static,
+    {
         let pool = match &self.relay_pool {
             Some(p) => p,
             None => return Err(ClientError::NotConnected),
         };
-
-        let filter: Filter = Filter::new()
-            // content = NOSTR_EVENT_TAG
-            // .custom_tag(tag, value)
+    
+        let filter = Filter::new()
+            .kind(Kind::TextNote)
             .custom_tag(SingleLetterTag { character: Alphabet::C, uppercase: false }, NOSTR_EVENT_TAG);
-
-        pool.subscribe(filter, SubscribeOptions::default()).await.map_err(|e| ClientError::NostrError(e.to_string()))?;
-
+    
+        pool.subscribe(filter, SubscribeOptions::default())
+            .await
+            .map_err(|e| ClientError::NostrError(e.to_string()))?;
     
         let mut notifications = pool.notifications();
-
         let keys_cloned = self.keys.clone();
+    
         tokio::spawn(async move {
-           loop {
-                let (event, relay_url) = match notifications.recv().await {
-                    Ok(RelayPoolNotification::Event {
-                        event, relay_url, ..
-                    }) => (event, relay_url),
+            loop {
+                match notifications.recv().await {
+                    Ok(RelayPoolNotification::Event { event, relay_url, .. }) => {
+                        if event.pubkey == keys_cloned.public_key() {
+                            info!("Ignoring event from self");
+                            continue;
+                        }
+    
+                        if !event.verify_signature() {
+                            warn!("Invalid signature for event id: {:?}", event.id);
+                            continue;
+                        }
+    
+                        on_event(*event, relay_url);
+                    },
                     Ok(RelayPoolNotification::Shutdown) => break,
                     _ => continue,
-                };
-
-                if event.pubkey == keys_cloned.public_key() {
-                    info!("Ignoring event from self");
-                    continue;
                 }
-            
-
-                if !event.verify_signature() {
-                    warn!("Invalid signature for event id: {:?}", event.id);
-                    continue;
-                }
-            
-                info!("Received event:\n{}", event.as_json());
             }
-            
         });
-
+    
         Ok(())
     }
+    
 }

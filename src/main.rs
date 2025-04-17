@@ -17,16 +17,18 @@ async fn main() {
     println!("hello world println");
     info!("hello world info");
 
-    let keys = Keys::parse("nsec1ytvz5cdxfhuj4jg9k47kf9jfecfg8cwgjd5tnygj8cl7l8mc8ljqk7ac7q").unwrap();
+    // let keys = Keys::parse("nsec1ytvz5cdxfhuj4jg9k47kf9jfecfg8cwgjd5tnygj8cl7l8mc8ljqk7ac7q").unwrap();
 
-    let mut client = Client::new(keys);
+    let mut client = Client::default();
 
     client.connect().await.unwrap();
 
 
     info!("Listening for events...");
-    client.subscribe_and_listen().await.unwrap();
-
+    client.subscribe_and_listen(|event, relay_url| {
+        info!("From relay {}:\n{}", relay_url, event.content);
+    }).await.unwrap();
+    
     loop {
         let mut input = String::new();
         // print!(">");
