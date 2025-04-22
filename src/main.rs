@@ -34,11 +34,11 @@ async fn main() {
     client.connect().await.unwrap();
 
 
-    let event_id = client.store("1".to_string(), Some("age".to_string())).await.unwrap();
+    let event_id = client.store("168".to_string(), Some("height".to_string())).await.unwrap();
 
     info!("Event ID: {}", event_id.to_bech32().unwrap());
 
-    let value = client.read(Some("age".to_string())).await.unwrap();
+    let value = client.read(Some("xs".to_string())).await.unwrap();
 
     info!("Value: {}", value);
 

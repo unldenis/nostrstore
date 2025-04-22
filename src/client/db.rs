@@ -26,6 +26,10 @@ pub enum DbError {
     #[error("variable not found: {0}")]
     VariableNotFound(String),
 
+    // must be a singleton value
+    #[error("must be a singleton value")]
+    SingletonValue,
+
     // failed to decrypt content
     #[error("failed to decrypt content")]
     DecryptError,
@@ -104,6 +108,11 @@ impl Client {
             let events = pool
             .fetch_events(filter,Duration::MAX,ReqExitPolicy::default()) .await.map_err(|e| DbError::NostrError(e.to_string()))?;
 
+
+            // events must be a singleton collection
+            if events.len() != 1 {
+                return Err(DbError::SingletonValue);
+            }
 
             info!("events: {:?}", events);
             let event= events.first().ok_or_else(|| DbError::VariableNotFound(tag_filter.unwrap_or_default()))?;
