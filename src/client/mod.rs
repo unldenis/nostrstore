@@ -1,3 +1,5 @@
+pub mod db;
+
 use tracing::{info, error, warn};
 use nostr_sdk::Keys;
 use nostr_sdk::prelude::*;
@@ -6,6 +8,7 @@ use serde::{Serialize, Deserialize};
 
 pub const NOSTR_EVENT_TAG : &str = "nostr-dm";
 pub const NOSTR_VERSION : &str = "0.1.0";
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ChatMessage {
@@ -85,14 +88,15 @@ impl Client {
     
         self.send_event(builder).await
     }
-    
-
-
+ 
     pub async fn send_event(&self, builder: EventBuilder) -> Result<EventId, ClientError> {
 
         match &self.relay_pool {
             Some(pool) => {
                 let event: Event = builder.sign(&self.keys).await.map_err(|e| ClientError::NostrError(e.to_string()))?;
+
+                // print the event
+                info!("Sending event: {:?}", event);
 
                 let output =  pool.send_event(&event).await.map_err(|e| ClientError::NostrError(e.to_string()))?;
         
