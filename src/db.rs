@@ -8,10 +8,13 @@ use std::time::Duration;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 use tracing::info;
 
-use crate::client::{Client, NostrDBError};
 use nostr_sdk::prelude::*;
 use nostr_sdk::Keys;
 use thiserror::Error;
+
+use crate::DatabaseBuilder;
+use crate::NostrDBError;
+use crate::Database;
 
 /// Constants for custom Nostr event kinds
 pub const NOSTR_STORE_KIND: u16 = 9215;
@@ -93,7 +96,28 @@ impl QueryOptions {
 }
 
 
-impl Client {
+
+impl Database {
+
+    pub fn builder(keys: Keys) -> DatabaseBuilder {
+        DatabaseBuilder::new(keys)
+    }
+
+    pub async fn send_event(&self, builder: EventBuilder) -> Result<EventId, NostrDBError> {
+        let event: Event = builder
+            .sign(&self.keys)
+            .await
+            .map_err(|e| NostrDBError::NostrError(e.to_string()))?;
+
+        let output = self
+            .relay_pool
+            .send_event(&event)
+            .await
+            .map_err(|e| NostrDBError::NostrError(e.to_string()))?;
+
+        Ok(*output.id())
+    }
+
     /// Stores a value in the Nostr database.
     /// The value is encrypted using the NIP-44 encryption scheme and associated with the provided key.
     pub async fn store<T: Into<String>>(&self, key: T, content: &str) -> Result<EventId, NostrDBError> {

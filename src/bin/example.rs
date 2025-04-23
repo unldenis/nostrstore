@@ -3,11 +3,10 @@ use std::env;
 use std::io;
 
 use nostr_db::db::QueryOptions;
+use nostr_db::Database;
 use nostr_sdk::prelude::*;
 use tracing::info;
-use tracing::error;
 use tracing_subscriber;
-use nostr_db::client::{Client, ClientBuilder};
 
 #[tokio::main]
 async fn main() {
@@ -18,23 +17,19 @@ async fn main() {
 
     info!("Your public key: {}", keys.public_key().to_bech32().unwrap());
 
-
-
-    let client = ClientBuilder::new(keys)
+    let db = Database::builder(keys)
         .with_default_relays()
         .build()
         .await
         .unwrap();
 
 
-
-    let value = client.read("age", QueryOptions::default()).await.unwrap();
+    let value = db.read("age", QueryOptions::default()).await.unwrap();
     info!("Before: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
 
-    client.store("age", "9").await.unwrap();
+    db.store("age", "21").await.unwrap();
 
-
-    let value = client.read("age", QueryOptions::default()).await.unwrap();
+    let value = db.read("age", QueryOptions::default()).await.unwrap();
     info!("After: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
 
     // client.aggregate("age").await.unwrap();

@@ -13,6 +13,33 @@ Nostr-DB is a lightweight, decentralized key-value store designed to work seamle
 2. Import it into your project.
 3. Start building decentralized applications with Nostr-DB.
 
+### Example Usage
+
+Below is an example of how to use the library in Rust:
+
+```rust
+use nostr_db::db::QueryOptions;
+use nostr_db::Database;
+
+#[tokio::main]
+async fn main() {
+    let keys = Keys::generate();
+
+    let db = Database::builder(keys)
+        .with_default_relays()
+        .build()
+        .await
+        .unwrap();
+
+
+    let value = db.read("age", QueryOptions::default()).await.unwrap();
+
+    db.store("age", "21").await.unwrap();
+
+    let value = db.read("age", QueryOptions::default()).await.unwrap();
+}
+```
+
 ## Roadmap
 - Initial release with basic key-value operations.
 - Advanced querying and indexing.
