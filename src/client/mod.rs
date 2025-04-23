@@ -1,4 +1,4 @@
-pub mod db;
+
 
 use tracing::{info, error, warn};
 use nostr_sdk::Keys;

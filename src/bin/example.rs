@@ -2,30 +2,21 @@ use core::error;
 use std::env;
 use std::io;
 
-use client::ChatMessage;
-use client::{ClientError, NOSTR_EVENT_TAG};
-use dotenv::dotenv;
+use nostr_db::client::ChatMessage;
+use nostr_db::client::{ClientError, NOSTR_EVENT_TAG};
 use nostr_sdk::prelude::*;
 use tracing::info;
 use tracing::error;
 use tracing_subscriber;
-use utils::load_or_generate_keys;
 
-mod client;
-mod utils;
-use crate::client::Client;
+use nostr_db::client::Client;
 
 #[tokio::main]
 async fn main() {
     // install global collector configured based on RUST_LOG env var.
     tracing_subscriber::fmt::init();
 
-    dotenv().unwrap(); // Reads the .env file
-
-    let keys = match env::var("SEC_KEY") {
-        Ok(val) => Keys::parse(&val).unwrap(),
-        Err(_) => load_or_generate_keys().await.unwrap(),
-    };
+    let keys = Keys::parse("nsec1fy50xae8lnd5pd2tx0yqvsflkmu4j0qefwacskhvdklytrf68vcqxunshc").unwrap();
 
     info!("Your public key: {}", keys.public_key().to_bech32().unwrap());
 
