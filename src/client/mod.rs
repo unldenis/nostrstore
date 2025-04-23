@@ -96,7 +96,7 @@ impl Client {
                 let event: Event = builder.sign(&self.keys).await.map_err(|e| ClientError::NostrError(e.to_string()))?;
 
                 // print the event
-                info!("Sending event: {:?}", event);
+                // info!("Sending event: {:?}", event);
 
                 let output =  pool.send_event(&event).await.map_err(|e| ClientError::NostrError(e.to_string()))?;
         

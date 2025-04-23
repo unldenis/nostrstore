@@ -34,13 +34,20 @@ async fn main() {
     client.connect().await.unwrap();
 
 
-    let event_id = client.store("168".to_string(), Some("height".to_string())).await.unwrap();
 
-    info!("Event ID: {}", event_id.to_bech32().unwrap());
+    let value = client.read("age", true).await.unwrap();
+    info!("Before: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
 
-    let value = client.read(Some("xs".to_string())).await.unwrap();
+    client.store("age", "5").await.unwrap();
 
-    info!("Value: {}", value);
+
+    let value = client.read("age", true).await.unwrap();
+    info!("After: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
+
+    client.aggregate("age").await.unwrap();
+
+    let value = client.read("age", true).await.unwrap();
+    info!("Aggregation: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
 
     // info!("Listening for events...");
     // client.subscribe_and_listen(|chat_message, event: Event, relay_url| {
