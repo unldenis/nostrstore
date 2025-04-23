@@ -31,6 +31,7 @@ async fn main() {
 
     let value = db.read("age", QueryOptions::default()).await.unwrap();
     info!("After: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
+    
 
     // client.aggregate("age").await.unwrap();
 

@@ -1,6 +1,8 @@
 
 
 pub mod db;
+pub mod event_stream;
+
 
 use tracing::{info, error, warn};
 use nostr_sdk::Keys;
