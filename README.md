@@ -6,7 +6,7 @@ Nostr-DB is a lightweight, decentralized key-value store designed to work seamle
 - **Decentralized Storage**: Built to integrate with the Nostr protocol for peer-to-peer data sharing.
 - **Lightweight**: Minimal dependencies and optimized for performance.
 - **Key-Value Store**: Simple and efficient key-value data storage.
-- **Easy Integration**: Simple API for developers to integrate into their projects.
+- **Encrypted Data**: All data is encrypted using NIP-44 for enhanced security.
 
 ## Getting Started
 1. Install the library (instructions coming soon).
@@ -16,7 +16,6 @@ Nostr-DB is a lightweight, decentralized key-value store designed to work seamle
 ## Roadmap
 - Initial release with basic key-value operations.
 - Advanced querying and indexing.
-- Support for encrypted data storage.
 - Comprehensive documentation and examples.
 
 ## Contributing
