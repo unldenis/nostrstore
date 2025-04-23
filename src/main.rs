@@ -38,7 +38,7 @@ async fn main() {
     let value = client.read("age", true).await.unwrap();
     info!("Before: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
 
-    client.store("age", "5").await.unwrap();
+    client.store("age", "0").await.unwrap();
 
 
     let value = client.read("age", true).await.unwrap();

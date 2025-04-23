@@ -35,7 +35,7 @@ pub enum DbError {
     SerdeJsonError(String),
 }
 
-#[derive(Serialize, Deserialize, Debug, Eq)]
+#[derive(Serialize, Deserialize, Debug, Eq, Clone)]
 pub struct AggregateValue {
     pub created_at: u64,
     pub value: String,
@@ -54,7 +54,7 @@ impl AggregateValue {
 
 impl PartialEq for AggregateValue {
     fn eq(&self, other: &Self) -> bool {
-        self.created_at == other.created_at
+        self.event_id == other.event_id
     }
 }
 
@@ -124,27 +124,22 @@ impl Client {
     pub async fn aggregate<T: Into<String>>(&self, key: T) -> Result<(), DbError> {
         let key_str: String = key.into();
         if let Some(pool) = &self.relay_pool {
-            let mut values = self.read_non_aggregates(&key_str, false).await?;
+
+            let non_aggregates = self.read_non_aggregates(&key_str, false).await?;
 
             // no events to aggregate
-            if values.is_empty() {
+            if non_aggregates.is_empty() {
                 return Err(DbError::NoEventsToAggregate);
             }
 
-            for event in values.iter() {
-                let delete_event_builder = EventBuilder::delete(EventDeletionRequest::new()
-                    .id(EventId::parse(&event.event_id).map_err(|e| DbError::NostrError(e.to_string()))?)
-                    .reason("delete event"));
-                self.send_event(delete_event_builder).await.ok();
-            }
+            let mut aggregates = self.read_aggregates(pool, &key_str, false).await?;
 
+            // add the non aggregates to the aggregates
+            aggregates.extend( non_aggregates.iter().cloned());
 
-            // add already present aggregates
-            values.append(&mut self.read_aggregates(pool, &key_str, false).await?);
-            
-
-            // push
-            let contents_json = serde_json::to_string(&values).map_err(|e| DbError::SerdeJsonError(e.to_string()))?;
+        
+            // store all data
+            let contents_json = serde_json::to_string(&aggregates).map_err(|e| DbError::SerdeJsonError(e.to_string()))?;
             let builder = EventBuilder::new(Kind::Custom(NOSTR_STORE_AGGREGATE_KIND), contents_json)
                 .tag(Tag::custom(
                     TagKind::SingleLetter(SingleLetterTag {
@@ -154,6 +149,16 @@ impl Client {
                     vec![key_str],
                 ));
             self.send_event(builder).await.map_err(DbError::ClientError)?;
+
+            // delete the non aggregates
+            for event in non_aggregates.iter() {
+                let delete_event_builder = EventBuilder::delete(EventDeletionRequest::new()
+                    .id(EventId::parse(&event.event_id).map_err(|e| DbError::NostrError(e.to_string()))?)
+                    .reason("delete event"));
+                self.send_event(delete_event_builder).await.ok();
+            }
+
+
 
             Ok(())
         } else {
@@ -226,7 +231,6 @@ impl Client {
             .map_err(|e| DbError::NostrError(e.to_string()))?
             .first()
         {
-
 
             let mut deserialized : Vec<AggregateValue> = serde_json::from_str(&event.content)
             .map_err(|e| DbError::SerdeJsonError(e.to_string()))?;
