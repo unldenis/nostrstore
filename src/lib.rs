@@ -32,6 +32,10 @@ pub enum NostrDBError {
     // DB error
     #[error("Database error: {0}")]
     DatabaseError(String),
+
+    // Event stream error
+    #[error("Event stream error: {0}")]
+    EventStreamError(String)
 }
 
 

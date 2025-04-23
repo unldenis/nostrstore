@@ -12,6 +12,7 @@ use nostr_sdk::prelude::*;
 use nostr_sdk::Keys;
 use thiserror::Error;
 
+use crate::event_stream::Operation;
 use crate::DatabaseBuilder;
 use crate::NostrDBError;
 use crate::Database;

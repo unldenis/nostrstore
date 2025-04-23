@@ -3,6 +3,8 @@ use std::env;
 use std::io;
 
 use nostr_db::db::QueryOptions;
+use nostr_db::event_stream::CounterExample;
+use nostr_db::event_stream::Operation;
 use nostr_db::Database;
 use nostr_sdk::prelude::*;
 use tracing::info;
@@ -33,6 +35,10 @@ async fn main() {
     info!("After: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
     
 
+    CounterExample::Increment.store(&db, "my_counter").await.unwrap();
+
+    let curr_counter_value = CounterExample::read(&db, "my_counter").await.unwrap();
+    
     // client.aggregate("age").await.unwrap();
 
     // let value = client.read("age", QueryOptions::default()).await.unwrap();

@@ -1,4 +1,9 @@
 
+use std::default;
+
+use nostr_sdk::prelude::*;
+use crate::{db::QueryOptions, Database, NostrDBError};
+
 pub trait Operation<T> : Sized {
     fn default() -> T;
 
@@ -7,6 +12,23 @@ pub trait Operation<T> : Sized {
     fn serialize(&self) -> String;
 
     fn apply(&self, value: T) -> T;
+
+    async fn store<I : Into<String>>(&self, db : &Database, key : I) -> Result<EventId, NostrDBError> {
+        let serialized = self.serialize();
+        db.store(key, &serialized).await
+    }
+
+    async fn read<I : Into<String>>(db : &Database, key : I) -> Result<T, NostrDBError> {
+        let values = db.read(key, QueryOptions::new(true)).await?;
+
+        let mut default = Self::default();
+
+        for ele in values {
+            let operation = Self::deserialize(ele.value).map_err(|e|NostrDBError::EventStreamError(e.to_string()))?;
+            default = operation.apply(default);
+        }
+        Ok(default)
+    }
 }
 
 
