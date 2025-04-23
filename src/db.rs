@@ -78,6 +78,21 @@ fn get_filter(public_key: PublicKey, key: &str, kind: u16) -> Filter {
         )
 }
 
+pub struct QueryOptions {
+    decrypt: bool,
+}
+impl Default for QueryOptions {
+    fn default() -> Self {
+        Self { decrypt: true }
+    }
+}
+impl QueryOptions {
+    pub fn new(decrypt: bool) -> Self {
+        Self { decrypt }
+    }
+}
+
+
 impl Client {
     /// Stores a value in the Nostr database.
     /// The value is encrypted using the NIP-44 encryption scheme and associated with the provided key.
@@ -138,15 +153,15 @@ impl Client {
     }
 
     /// Reads values associated with a key from the Nostr database.
-    pub async fn read<T: Into<String>>(&self, key: T, decrypt: bool) -> Result<BTreeSet<AggregateValue>, NostrDBError> {
+    pub async fn read<T: Into<String>>(&self, key: T, query_options : QueryOptions) -> Result<BTreeSet<AggregateValue>, NostrDBError> {
         let key_str: String = key.into();
-        let mut contents = self.read_non_aggregates(&key_str, decrypt).await?;
-        contents.append(&mut self.read_aggregates(&key_str, decrypt).await?);
+        let mut contents = self.read_non_aggregates(&key_str, query_options.decrypt).await?;
+        contents.append(&mut self.read_aggregates(&key_str, query_options.decrypt).await?);
         Ok(contents)
     }
 
     /// Reads non-aggregated values associated with a key.
-    pub async fn read_non_aggregates<T: Into<String>>(&self, key: T, decrypt: bool) -> Result<BTreeSet<AggregateValue>, NostrDBError> {
+    async fn read_non_aggregates<T: Into<String>>(&self, key: T, decrypt: bool) -> Result<BTreeSet<AggregateValue>, NostrDBError> {
         let key_str: String = key.into();
         let events = self
             .relay_pool

@@ -2,6 +2,7 @@ use core::error;
 use std::env;
 use std::io;
 
+use nostr_db::db::QueryOptions;
 use nostr_sdk::prelude::*;
 use tracing::info;
 use tracing::error;
@@ -19,7 +20,7 @@ async fn main() {
 
 
 
-    let mut client = ClientBuilder::new(keys)
+    let client = ClientBuilder::new(keys)
         .with_default_relays()
         .build()
         .await
@@ -27,19 +28,19 @@ async fn main() {
 
 
 
-    let value = client.read("age", true).await.unwrap();
+    let value = client.read("age", QueryOptions::default()).await.unwrap();
     info!("Before: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
 
-    client.store("age", "0").await.unwrap();
+    client.store("age", "9").await.unwrap();
 
 
-    let value = client.read("age", true).await.unwrap();
+    let value = client.read("age", QueryOptions::default()).await.unwrap();
     info!("After: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
 
-    client.aggregate("age").await.unwrap();
+    // client.aggregate("age").await.unwrap();
 
-    let value = client.read("age", true).await.unwrap();
-    info!("Aggregation: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
+    // let value = client.read("age", QueryOptions::default()).await.unwrap();
+    // info!("Aggregation: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
 
 
 }
