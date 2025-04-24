@@ -84,15 +84,19 @@ fn get_filter(public_key: PublicKey, key: &str, kind: u16) -> Filter {
 
 pub struct QueryOptions {
     decrypt: bool,
+    aggregate_count: usize,
 }
 impl Default for QueryOptions {
     fn default() -> Self {
-        Self { decrypt: true }
+        Self {
+            decrypt: true,
+            aggregate_count: 1000,
+        }
     }
 }
 impl QueryOptions {
-    pub fn new(decrypt: bool) -> Self {
-        Self { decrypt }
+    pub fn new(decrypt: bool, aggregate_count : usize) -> Self {
+        Self { decrypt, aggregate_count }
     }
 }
 
@@ -134,14 +138,32 @@ impl Database {
                     character: Alphabet::D,
                     uppercase: false,
                 }),
-                vec![key.into()],
+                vec![key],
             ));
 
         self.send_event(builder).await
     }
 
+    async fn delete_events(&self, events : &BTreeSet<AggregateValue>) -> Result<(), NostrDBError> {
+        let event_ids: Vec<EventId> = events
+            .iter()
+            .filter_map(|event| EventId::parse(&event.event_id).ok())
+            .collect();
+
+        if !event_ids.is_empty() {
+            let delete_event_builder = EventBuilder::delete(
+            EventDeletionRequest::new()
+                .ids(event_ids)
+                .reason("delete events"),
+            );
+            self.send_event(delete_event_builder).await.ok();
+        }
+        Ok(())
+    }
+
+
     /// Aggregates values associated with a key in the Nostr database.
-    pub async fn aggregate<T: Into<String>>(&self, key: T) -> Result<(), NostrDBError> {
+    async fn aggregate<T: Into<String>>(&self, key: T) -> Result<(), NostrDBError> {
         let key_str: String = key.into();
         let non_aggregates = self.read_non_aggregates(&key_str, false).await?;
 
@@ -161,29 +183,56 @@ impl Database {
                     character: Alphabet::D,
                     uppercase: false,
                 }),
-                vec![key_str.clone()],
+                vec![&key_str],
             ));
         self.send_event(builder).await?;
 
-        for event in non_aggregates.iter() {
-            let delete_event_builder = EventBuilder::delete(
-                EventDeletionRequest::new()
-                    .id(EventId::parse(&event.event_id).map_err(|e| NostrDBError::NostrError(e.to_string()))?)
-                    .reason("delete event"),
-            );
-            self.send_event(delete_event_builder).await.ok();
-        }
+        self.delete_events(&non_aggregates).await?;
+
+        Ok(())
+    }
+
+    pub async fn remove<T : Into<String>>(&self, key: T) -> Result<(), NostrDBError> {
+        let key_str: String = key.into();
+        let non_aggregates = self.read_non_aggregates(&key_str, false).await?;
+        
+        self.delete_events(&non_aggregates).await?;
+
+        // Replace the aggregate event
+        let contents_json = serde_json::to_string(&BTreeSet::<AggregateValue>::new()) .map_err(NostrDBError::SerdeJsonError)?;
+
+        let builder = EventBuilder::new(Kind::Custom(NOSTR_STORE_AGGREGATE_KIND), contents_json)
+            .tag(Tag::custom(
+                TagKind::SingleLetter(SingleLetterTag {
+                    character: Alphabet::D,
+                    uppercase: false,
+                }),
+                vec![&key_str],
+            ));
+        self.send_event(builder).await?;
 
         Ok(())
     }
 
     /// Reads values associated with a key from the Nostr database.
-    pub async fn read<T: Into<String>>(&self, key: T, query_options : QueryOptions) -> Result<BTreeSet<AggregateValue>, NostrDBError> {
+    pub async fn read_history<T: Into<String>>(&self, key: T, query_options : QueryOptions) -> Result<BTreeSet<AggregateValue>, NostrDBError> {
         let key_str: String = key.into();
         let mut contents = self.read_non_aggregates(&key_str, query_options.decrypt).await?;
+
+        // Check if we need to aggregate
+        let to_aggregate = contents.len() > query_options.aggregate_count;
+
         contents.append(&mut self.read_aggregates(&key_str, query_options.decrypt).await?);
+
+
+        if to_aggregate {
+            // info!("Aggregating values for key: {}", key_str);
+            self.aggregate(&key_str).await?;
+        }
+
         Ok(contents)
     }
+
 
     /// Reads non-aggregated values associated with a key.
     async fn read_non_aggregates<T: Into<String>>(&self, key: T, decrypt: bool) -> Result<BTreeSet<AggregateValue>, NostrDBError> {
@@ -247,7 +296,7 @@ impl Database {
     where
         O: Operation,
     {
-        let values = self.read(key, QueryOptions::new(true)).await?;
+        let values = self.read_history(key, QueryOptions::default()).await?;
     
         let mut acc = O::default();
     
@@ -258,6 +307,12 @@ impl Database {
         }
     
         Ok(acc)
+    }
+
+    pub async fn read<T: Into<String>>(&self, key: T) -> Result<String, NostrDBError> {
+        let history = self.read_history(key, QueryOptions::default()).await?;
+        let last = history.last().ok_or(NostrDBError::DatabaseError("Variable not found".to_string()))?;
+        return Ok(last.value.clone());
     }
     
 }

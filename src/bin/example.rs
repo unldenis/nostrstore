@@ -1,7 +1,9 @@
 use core::error;
+use std::collections::BTreeSet;
 use std::env;
 use std::io;
 
+use nostr_db::db::AggregateValue;
 use nostr_db::db::QueryOptions;
 use nostr_db::event_stream::CounterEvent;
 use nostr_db::event_stream::Operation;
@@ -26,24 +28,21 @@ async fn main() {
         .unwrap();
 
 
-    let value = db.read("age", QueryOptions::default()).await.unwrap();
-    info!("Before: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
+    // Standard database example
+    db.store("my_key", "my_val").await.unwrap();
+    let value = db.read("my_key").await.unwrap();
+    info!("Stored value: {}", value);
 
-    db.store("age", "21").await.unwrap();
+    // Historical database example
+    db.store("my_key", "my_second_val").await.unwrap();
+    let history :BTreeSet<AggregateValue> = db.read_history("my_key", QueryOptions::default()).await.unwrap();
+    info!("History: {:?}", history);
 
-    let value = db.read("age", QueryOptions::default()).await.unwrap();
-    info!("After: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
-    
-
+    // Event stream example
     db.store_event("my_counter", CounterEvent::Increment).await.unwrap();
 
     let curr_counter_value = db.read_event::<CounterEvent>("my_counter").await.unwrap();
     info!("Current counter value: {}", curr_counter_value);
-    // client.aggregate("age").await.unwrap();
-
-    // let value = client.read("age", QueryOptions::default()).await.unwrap();
-    // info!("Aggregation: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
-
 
 }
  
