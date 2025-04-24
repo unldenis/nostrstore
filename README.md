@@ -32,11 +32,21 @@ async fn main() {
         .unwrap();
 
 
-    let value = db.read("age", QueryOptions::default()).await.unwrap();
+    // Standard database example
+    db.store("my_key", "my_val").await.unwrap();
+    let value = db.read("my_key").await.unwrap();
+    info!("Stored value: {}", value);
 
-    db.store("age", "21").await.unwrap();
+    // Historical database example
+    db.store("my_key", "my_second_val").await.unwrap();
+    let history :BTreeSet<AggregateValue> = db.read_history("my_key", QueryOptions::default()).await.unwrap();
+    info!("History: {:?}", history);
 
-    let value = db.read("age", QueryOptions::default()).await.unwrap();
+    // Event stream example
+    db.store_event("my_counter", CounterEvent::Increment).await.unwrap();
+
+    let curr_counter_value = db.read_event::<CounterEvent>("my_counter").await.unwrap();
+    info!("Current counter value: {}", curr_counter_value);
 }
 ```
 
