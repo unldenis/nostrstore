@@ -3,7 +3,7 @@ use std::env;
 use std::io;
 
 use nostr_db::db::QueryOptions;
-use nostr_db::event_stream::CounterExample;
+use nostr_db::event_stream::CounterEvent;
 use nostr_db::event_stream::Operation;
 use nostr_db::Database;
 use nostr_sdk::prelude::*;
@@ -35,9 +35,9 @@ async fn main() {
     info!("After: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
     
 
-    db.store_event("my_counter", CounterExample::Increment).await.unwrap();
+    db.store_event("my_counter", CounterEvent::Increment).await.unwrap();
 
-    let curr_counter_value = db.read_event::<CounterExample>("my_counter").await.unwrap();
+    let curr_counter_value = db.read_event::<CounterEvent>("my_counter").await.unwrap();
     info!("Current counter value: {}", curr_counter_value);
     // client.aggregate("age").await.unwrap();
 
