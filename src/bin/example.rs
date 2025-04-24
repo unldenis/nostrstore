@@ -35,10 +35,10 @@ async fn main() {
     info!("After: {:?}", value.iter().map(|x| x.value.clone()).collect::<Vec<String>>());
     
 
-    CounterExample::Increment.store(&db, "my_counter").await.unwrap();
+    db.store_event("my_counter", CounterExample::Increment).await.unwrap();
 
-    let curr_counter_value = CounterExample::read(&db, "my_counter").await.unwrap();
-    
+    let curr_counter_value = db.read_event::<CounterExample>("my_counter").await.unwrap();
+    info!("Current counter value: {}", curr_counter_value);
     // client.aggregate("age").await.unwrap();
 
     // let value = client.read("age", QueryOptions::default()).await.unwrap();

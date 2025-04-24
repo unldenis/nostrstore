@@ -237,6 +237,29 @@ impl Database {
             Ok(BTreeSet::new())
         }
     }
+
+    pub async fn store_event<I : Into<String>, O : Operation>(&self, key : I, operation : O) -> Result<EventId, NostrDBError> {
+        let serialized = operation.serialize();
+        self.store(key, &serialized).await
+    }
+
+    pub async fn read_event<O>(&self, key: impl Into<String>) -> Result<O::Value, NostrDBError>
+    where
+        O: Operation,
+    {
+        let values = self.read(key, QueryOptions::new(true)).await?;
+    
+        let mut acc = O::default();
+    
+        for ele in values {
+            let op = O::deserialize(ele.value)
+                .map_err(|e| NostrDBError::EventStreamError(e.to_string()))?;
+            acc = op.apply(acc);
+        }
+    
+        Ok(acc)
+    }
+    
 }
 
 #[cfg(test)]

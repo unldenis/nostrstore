@@ -4,31 +4,16 @@ use std::default;
 use nostr_sdk::prelude::*;
 use crate::{db::QueryOptions, Database, NostrDBError};
 
-pub trait Operation<T> : Sized {
-    fn default() -> T;
+pub trait Operation: Sized {
+    type Value;
+
+    fn default() -> Self::Value;
 
     fn deserialize(value: String) -> Result<Self, Box<dyn std::error::Error>>;
 
     fn serialize(&self) -> String;
 
-    fn apply(&self, value: T) -> T;
-
-    async fn store<I : Into<String>>(&self, db : &Database, key : I) -> Result<EventId, NostrDBError> {
-        let serialized = self.serialize();
-        db.store(key, &serialized).await
-    }
-
-    async fn read<I : Into<String>>(db : &Database, key : I) -> Result<T, NostrDBError> {
-        let values = db.read(key, QueryOptions::new(true)).await?;
-
-        let mut default = Self::default();
-
-        for ele in values {
-            let operation = Self::deserialize(ele.value).map_err(|e|NostrDBError::EventStreamError(e.to_string()))?;
-            default = operation.apply(default);
-        }
-        Ok(default)
-    }
+    fn apply(&self, value: Self::Value) -> Self::Value;
 }
 
 
@@ -38,7 +23,8 @@ pub enum CounterExample  {
     Set(i64),
 }
 
-impl Operation<i64> for CounterExample {
+impl Operation for CounterExample {
+    type Value = i64;
 
     fn default() -> i64 {
         0
@@ -77,7 +63,9 @@ pub struct PaymentStatus {
     pub status: String,
 }
 
-impl Operation<bool> for PaymentStatus {
+impl Operation for PaymentStatus {
+    type Value = bool;
+
     fn default() -> bool {
         false
     }
