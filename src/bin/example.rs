@@ -1,12 +1,8 @@
-use core::error;
-use std::collections::BTreeSet;
-use std::env;
-use std::io;
 
-use nostr_db::db::AggregateValue;
-use nostr_db::db::QueryOptions;
+use std::collections::BTreeSet;
+
+use nostr_db::db::{AggregateValue, QueryOptions};
 use nostr_db::event_stream::CounterEvent;
-use nostr_db::event_stream::Operation;
 use nostr_db::Database;
 use nostr_sdk::prelude::*;
 use tracing::info;
@@ -37,9 +33,9 @@ async fn main() {
     db.store("my_key", "my_second_val").await.unwrap();
     let history :BTreeSet<AggregateValue> = db.read_history("my_key", QueryOptions::default()).await.unwrap();
     info!("History: {:?}", history);
-
+    
     // Event stream example
-    db.store_event("my_counter", CounterEvent::Increment).await.unwrap();
+    db.store_event("my_counter", CounterEvent::Decrement).await.unwrap();
 
     let curr_counter_value = db.read_event::<CounterEvent>("my_counter").await.unwrap();
     info!("Current counter value: {}", curr_counter_value);

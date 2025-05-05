@@ -4,11 +4,10 @@ pub mod db;
 pub mod event_stream;
 
 
-use tracing::{info, error, warn};
+use tracing::error;
 use nostr_sdk::Keys;
 use nostr_sdk::prelude::*;
 use thiserror::Error;
-use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Error)]
 pub enum NostrDBError {
@@ -85,7 +84,7 @@ impl DatabaseBuilder {
 
         Ok(Database {
             keys: self.keys,
-            relays: self.relays,
+           //  relays: self.relays,
             relay_pool,
         })
     }
@@ -94,6 +93,6 @@ impl DatabaseBuilder {
 
 pub struct Database {
     pub keys: Keys,
-    relays: Vec<String>,
+//    relays: Vec<String>,
     pub relay_pool: RelayPool, // RelayPool is no longer an Option
 }

@@ -1,9 +1,5 @@
 
-use std::default;
-
 use nostr_sdk::prelude::*;
-use tracing_subscriber::fmt::format;
-use crate::{db::QueryOptions, Database, NostrDBError};
 
 //// Represents a trait for operations that can be performed on a value
 /// in the Nostr database. This trait defines methods for

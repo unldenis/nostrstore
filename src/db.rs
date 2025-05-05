@@ -1,17 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
-use std::future::Future;
-use std::io::{self, Read, Write};
-use std::pin::Pin;
-use std::task::{Context, Poll};
 use std::time::Duration;
-use tokio::io::{AsyncWrite, AsyncWriteExt};
-use tracing::info;
-
 use nostr_sdk::prelude::*;
 use nostr_sdk::Keys;
-use thiserror::Error;
-
 use crate::event_stream::Operation;
 use crate::DatabaseBuilder;
 use crate::NostrDBError;
