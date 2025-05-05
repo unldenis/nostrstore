@@ -1,10 +1,9 @@
-use std::collections::BTreeSet;
 use tracing::info;
 use tracing_subscriber;
 
 use nostr_db::{
     DatabaseBuilder, QueryOptions,
-    operation::counter::{self, CounterEvent},
+    operation::counter::CounterEvent,
 };
 use nostr_sdk::prelude::*;
 

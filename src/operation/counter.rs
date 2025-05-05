@@ -1,6 +1,6 @@
 use super::Operation;
 
-//// An operation that can be applied to a counter, such as incrementing or decrementing it.
+/// An operation that can be applied to a counter, such as incrementing or decrementing it.
 /// This enum implements the Operation trait, allowing it to be used with the Database.
 pub enum CounterEvent {
     Increment,
