@@ -18,35 +18,44 @@ Nostr-DB is a lightweight, decentralized key-value store designed to work seamle
 Below is an example of how to use the library in Rust:
 
 ```rust
-use nostr_db::db::QueryOptions;
-use nostr_db::Database;
+use tracing::info;
+use tracing_subscriber;
+
+use nostr_db::{QueryOptions, DatabaseBuilder};
+use nostr_sdk::prelude::*;
 
 #[tokio::main]
 async fn main() {
-    let keys = Keys::generate();
+    // install global collector configured based on RUST_LOG env var.
+    tracing_subscriber::fmt::init();
 
-    let db = Database::builder(keys)
+    let keys = Keys::parse("nsec1fy50xae8lnd5pd2tx0yqvsflkmu4j0qefwacskhvdklytrf68vcqxunshc").unwrap();
+    let db = DatabaseBuilder::new(keys.clone())
         .with_default_relays()
         .build()
         .await
         .unwrap();
 
 
-    // Standard database example
-    db.store("my_key", "my_val").await.unwrap();
-    let value = db.read("my_key").await.unwrap();
-    info!("Stored value: {}", value);
+    // read name from terminal input
+    let mut input = String::new();
+    println!("Enter your name: ");
+    std::io::stdin().read_line(&mut input).unwrap();
 
-    // Historical database example
-    db.store("my_key", "my_second_val").await.unwrap();
-    let history :BTreeSet<AggregateValue> = db.read_history("my_key", QueryOptions::default()).await.unwrap();
-    info!("History: {:?}", history);
+    db.store("name", input.trim()).await.unwrap();
 
-    // Event stream example
-    db.store_event("my_counter", CounterEvent::Increment).await.unwrap();
+    let name = db.read("name").await.unwrap();
+    info!("Name: {}", name);
 
-    let curr_counter_value = db.read_event::<CounterEvent>("my_counter").await.unwrap();
-    info!("Current counter value: {}", curr_counter_value);
+
+    let history_name = db
+        .read_history("name", QueryOptions::default())
+        .await
+        .unwrap()
+        .iter()
+        .map(|r| r.content.clone()).collect::<Vec<_>>();
+
+    info!("History of Name: {:?}", history_name);
 }
 ```
 
