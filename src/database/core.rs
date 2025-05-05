@@ -1,17 +1,17 @@
 use std::collections::BTreeSet;
 use std::time::Duration;
 
-use nostr_sdk::{Keys, RelayPool};
 use nostr_sdk::prelude::*;
+use nostr_sdk::{Keys, RelayPool};
 
-use crate::{NostrDBError, Operation};
 use super::query::QueryOptions;
 use super::{DatabaseBuilder, NostrRecord};
+use crate::{NostrDBError, Operation};
 
 const NOSTR_STORE_KIND: u16 = 9215;
 const NOSTR_STORE_AGGREGATE_KIND: u16 = 39215;
 
-/// Represents a Nostr database with a relay pool and keys. 
+/// Represents a Nostr database with a relay pool and keys.
 /// It provides methods to send, store, remove, and read events.
 /// It also allows for aggregation of events and deletion of events.
 /// It is built using the builder pattern.
@@ -36,7 +36,6 @@ fn get_filter(public_key: PublicKey, key: &str, kind: u16) -> Filter {
 }
 
 impl Database {
-
     /// Constructs a new Nostr event and sends it to the relay pool.
     async fn send_event(&self, builder: EventBuilder) -> Result<EventId, NostrDBError> {
         let event = builder
@@ -66,11 +65,14 @@ impl Database {
         combined.extend(non_aggregated.iter().cloned());
 
         let content = serde_json::to_string(&combined)?;
-        let builder = EventBuilder::new(Kind::Custom(NOSTR_STORE_AGGREGATE_KIND), content)
-            .tag(Tag::custom(TagKind::SingleLetter(SingleLetterTag {
-                character: Alphabet::D,
-                uppercase: false,
-            }), vec![&key_str]));
+        let builder =
+            EventBuilder::new(Kind::Custom(NOSTR_STORE_AGGREGATE_KIND), content).tag(Tag::custom(
+                TagKind::SingleLetter(SingleLetterTag {
+                    character: Alphabet::D,
+                    uppercase: false,
+                }),
+                vec![&key_str],
+            ));
 
         self.send_event(builder).await?;
         self.delete_events(&non_aggregated).await?;
@@ -79,14 +81,14 @@ impl Database {
 
     /// Deletes the specified events from the nostr database.
     async fn delete_events(&self, events: &BTreeSet<NostrRecord>) -> Result<(), NostrDBError> {
-        let ids: Vec<EventId> = events.iter()
+        let ids: Vec<EventId> = events
+            .iter()
             .filter_map(|rec| EventId::parse(&rec.event_id).ok())
             .collect();
 
         if !ids.is_empty() {
-            let delete_builder = EventBuilder::delete(
-                EventDeletionRequest::new().ids(ids).reason("delete events")
-            );
+            let delete_builder =
+                EventBuilder::delete(EventDeletionRequest::new().ids(ids).reason("delete events"));
             self.send_event(delete_builder).await?;
         }
 
@@ -95,23 +97,37 @@ impl Database {
 
     /// Reads non-aggregated events associated with the given key from the database.
     /// This method fetches all events associated with the key and returns them as a BTreeSet.
-    async fn read_non_aggregates<T: Into<String>>(&self, key: T, decrypt: bool) -> Result<BTreeSet<NostrRecord>, NostrDBError> {
+    async fn read_non_aggregates<T: Into<String>>(
+        &self,
+        key: T,
+        decrypt: bool,
+    ) -> Result<BTreeSet<NostrRecord>, NostrDBError> {
         let key_str = key.into();
-        let events = self.relay_pool
-            .fetch_events(get_filter(self.keys.public_key, &key_str, NOSTR_STORE_KIND), Duration::MAX, ReqExitPolicy::default())
+        let events = self
+            .relay_pool
+            .fetch_events(
+                get_filter(self.keys.public_key, &key_str, NOSTR_STORE_KIND),
+                Duration::MAX,
+                ReqExitPolicy::default(),
+            )
             .await
             .map_err(|e| NostrDBError::NostrError(e.to_string()))?;
 
         let mut records = BTreeSet::new();
         for event in events {
             let content = if decrypt {
-                self.keys.nip44_decrypt(&event.pubkey, &event.content)
+                self.keys
+                    .nip44_decrypt(&event.pubkey, &event.content)
                     .await
                     .map_err(|e| NostrDBError::DecryptionError(e))?
             } else {
                 event.content.clone()
             };
-            records.insert(NostrRecord::new(event.created_at.as_u64(), content, event.id.to_string()));
+            records.insert(NostrRecord::new(
+                event.created_at.as_u64(),
+                content,
+                event.id.to_string(),
+            ));
         }
 
         Ok(records)
@@ -119,9 +135,18 @@ impl Database {
 
     /// Reads aggregated events associated with the given key from the database.
     /// This method fetches the first event associated with the key and returns it as a BTreeSet.
-    async fn read_aggregates(&self, key: &str, decrypt: bool) -> Result<BTreeSet<NostrRecord>, NostrDBError> {
-        let events = self.relay_pool
-            .fetch_events(get_filter(self.keys.public_key, key, NOSTR_STORE_AGGREGATE_KIND), Duration::MAX, ReqExitPolicy::default())
+    async fn read_aggregates(
+        &self,
+        key: &str,
+        decrypt: bool,
+    ) -> Result<BTreeSet<NostrRecord>, NostrDBError> {
+        let events = self
+            .relay_pool
+            .fetch_events(
+                get_filter(self.keys.public_key, key, NOSTR_STORE_AGGREGATE_KIND),
+                Duration::MAX,
+                ReqExitPolicy::default(),
+            )
             .await
             .map_err(|e| NostrDBError::NostrError(e.to_string()))?;
 
@@ -129,7 +154,9 @@ impl Database {
             let mut records: Vec<NostrRecord> = serde_json::from_str(&event.content)?;
             if decrypt {
                 for record in &mut records {
-                    record.content = self.keys.nip44_decrypt(&event.pubkey, &record.content)
+                    record.content = self
+                        .keys
+                        .nip44_decrypt(&event.pubkey, &record.content)
                         .await
                         .map_err(|e| NostrDBError::DecryptionError(e))?;
                 }
@@ -145,17 +172,21 @@ impl Database {
         DatabaseBuilder::new(keys)
     }
 
-
     /// Stores a new key-value pair in the database.
     /// The content is encrypted using the NIP-44 encryption scheme.
-    pub async fn store<T: Into<String>>(&self, key: T, content: &str) -> Result<EventId, NostrDBError> {
-        let encrypted = self.keys
+    pub async fn store<T: Into<String>>(
+        &self,
+        key: T,
+        content: &str,
+    ) -> Result<EventId, NostrDBError> {
+        let encrypted = self
+            .keys
             .nip44_encrypt(&self.keys.public_key, content)
             .await
             .map_err(|e| NostrDBError::EncryptionError(e))?;
 
-        let builder = EventBuilder::new(Kind::Custom(NOSTR_STORE_KIND), encrypted)
-            .tag(Tag::custom(
+        let builder =
+            EventBuilder::new(Kind::Custom(NOSTR_STORE_KIND), encrypted).tag(Tag::custom(
                 TagKind::SingleLetter(SingleLetterTag {
                     character: Alphabet::D,
                     uppercase: false,
@@ -175,11 +206,14 @@ impl Database {
 
         // Reset the aggregate event to empty
         let empty = serde_json::to_string(&BTreeSet::<NostrRecord>::new())?;
-        let builder = EventBuilder::new(Kind::Custom(NOSTR_STORE_AGGREGATE_KIND), empty)
-            .tag(Tag::custom(TagKind::SingleLetter(SingleLetterTag {
-                character: Alphabet::D,
-                uppercase: false,
-            }), vec![&key_str]));
+        let builder =
+            EventBuilder::new(Kind::Custom(NOSTR_STORE_AGGREGATE_KIND), empty).tag(Tag::custom(
+                TagKind::SingleLetter(SingleLetterTag {
+                    character: Alphabet::D,
+                    uppercase: false,
+                }),
+                vec![&key_str],
+            ));
 
         self.send_event(builder).await?;
         Ok(())
@@ -190,7 +224,8 @@ impl Database {
     /// If no events are found, it returns an error.
     pub async fn read<T: Into<String>>(&self, key: T) -> Result<String, NostrDBError> {
         let history = self.read_history(key, QueryOptions::default()).await?;
-        let last = history.last()
+        let last = history
+            .last()
             .ok_or_else(|| NostrDBError::DatabaseError("Variable not found".into()))?;
 
         Ok(last.content.clone())
@@ -199,7 +234,11 @@ impl Database {
     /// Reads the history of values associated with the given key from the database.
     /// This method fetches all events associated with the key and returns them as a BTreeSet.
     /// The events are sorted by their creation time.
-    pub async fn read_history<T: Into<String>>(&self, key: T, options: QueryOptions) -> Result<BTreeSet<NostrRecord>, NostrDBError> {
+    pub async fn read_history<T: Into<String>>(
+        &self,
+        key: T,
+        options: QueryOptions,
+    ) -> Result<BTreeSet<NostrRecord>, NostrDBError> {
         let key_str = key.into();
         let mut records = self.read_non_aggregates(&key_str, options.decrypt).await?;
 
@@ -214,13 +253,15 @@ impl Database {
         Ok(records)
     }
 
-
     /// Stores an event-operation in the database.
-    pub async fn store_event<I: Into<String>, O: Operation>(&self, key: I, operation: O) -> Result<EventId, NostrDBError> {
+    pub async fn store_event<I: Into<String>, O: Operation>(
+        &self,
+        key: I,
+        operation: O,
+    ) -> Result<EventId, NostrDBError> {
         let serialized = operation.serialize();
         self.store(key, &serialized).await
     }
-
 
     /// Reads the event-stream processed by the given operation.
     /// This method fetches the history of events associated with the key and applies the operation to each event.

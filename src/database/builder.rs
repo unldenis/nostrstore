@@ -1,6 +1,6 @@
-use nostr_sdk::{RelayPool, Keys, RelayOptions};
-use crate::error::NostrDBError;
 use super::core::Database;
+use crate::error::NostrDBError;
+use nostr_sdk::{Keys, RelayOptions, RelayPool};
 
 /// Constructs a Nostr database with a relay pool and keys.
 pub struct DatabaseBuilder {
@@ -44,7 +44,9 @@ impl DatabaseBuilder {
             relay_pool
                 .add_relay(url, RelayOptions::default())
                 .await
-                .map_err(|e| NostrDBError::NostrError(format!("Failed to add relay {}: {}", url, e)))?;
+                .map_err(|e| {
+                    NostrDBError::NostrError(format!("Failed to add relay {}: {}", url, e))
+                })?;
         }
 
         relay_pool.connect().await;

@@ -3,7 +3,7 @@ use thiserror::Error;
 use nostr_sdk::prelude::*;
 
 //// Custom error type for the NostrDB library.
-/// 
+///
 /// This enum represents various errors that can occur within the library.
 #[derive(Debug, Error)]
 pub enum NostrDBError {
