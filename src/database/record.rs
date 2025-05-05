@@ -1,7 +1,9 @@
 use nostr_sdk::prelude::*;
 use serde::{Deserialize, Serialize};
 
-/// Rappresenta un evento che ha un valore aggregabile.
+/// A struct representing a Database record in Nostr.
+/// It's used primarily when aggregating events in one single event.
+/// The content is encrypted using the NIP-44 encryption scheme.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NostrRecord {
     pub created_at: u64,
@@ -19,7 +21,6 @@ impl NostrRecord {
     }
 }
 
-// Ordinamento crescente per timestamp
 impl PartialEq for NostrRecord {
     fn eq(&self, other: &Self) -> bool {
         self.event_id == other.event_id

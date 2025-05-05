@@ -2,6 +2,7 @@ use nostr_sdk::{RelayPool, Keys, RelayOptions};
 use crate::error::NostrDBError;
 use super::core::Database;
 
+/// Constructs a Nostr database with a relay pool and keys.
 pub struct DatabaseBuilder {
     keys: Keys,
     relays: Vec<String>,
@@ -15,11 +16,13 @@ impl DatabaseBuilder {
         }
     }
 
+    /// Sets the nostr relays to be used by the database.
     pub fn with_relays(mut self, relays: Vec<String>) -> Self {
         self.relays = relays;
         self
     }
 
+    /// Uses default relays if none are provided.
     pub fn with_default_relays(mut self) -> Self {
         self.relays = vec![
             "wss://relay.damus.io".to_string(),
@@ -29,6 +32,7 @@ impl DatabaseBuilder {
         self
     }
 
+    /// Creates a new Database instance with the provided keys and relays.
     pub async fn build(self) -> Result<Database, NostrDBError> {
         if self.relays.is_empty() {
             return Err(NostrDBError::NoRelaysProvided);

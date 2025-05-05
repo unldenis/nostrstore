@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use tracing::info;
 use tracing_subscriber;
 
-use nostr_db::{QueryOptions, DatabaseBuilder};
+use nostr_db::{operation::counter::{self, CounterEvent}, DatabaseBuilder, QueryOptions};
 use nostr_sdk::prelude::*;
 
 #[tokio::main]
@@ -38,4 +38,11 @@ async fn main() {
         .map(|r| r.content.clone()).collect::<Vec<_>>();
 
     info!("History of Name: {:?}", history_name);
+
+
+    // event stream
+    db.store_event("my-counter", CounterEvent::Increment).await.unwrap();
+
+    let counter = db.read_event::<CounterEvent>("my-counter").await.unwrap();
+    info!("Counter: {:?}", counter);
 }
