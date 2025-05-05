@@ -3,12 +3,13 @@ name = "nostrstore"
 version = "0.1.0"
 edition = "2024"
 
-description = "A simple key-value CRDT-like database over the Nostr protocol"
-repository = "https://github.com/unldenis/nostr-db"
+description = "nostrstore is a lightweight, decentralized key-value store designed to work seamlessly with the Nostr protocol"
+repository = "https://github.com/unldenis/nostrstore"
 readme = "README.md"
 authors = ["Denis Mehilli <mehillideny13@gmail.com>"]
-keywords = ["nostr", "crdt", "database", "p2p"]
+keywords = ["nostr", "database", "p2p"]
 categories = ["data-structures", "database", "network-programming"]
+license = "MIT"
 
 [dependencies]
 nostr-sdk = { version = "0.40", features = ["nip44"] }
