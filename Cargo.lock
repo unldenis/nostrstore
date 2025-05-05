@@ -766,19 +766,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nostr-db"
-version = "0.1.0"
-dependencies = [
- "nostr-sdk",
- "serde",
- "serde_json",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "nostr-relay-pool"
 version = "0.40.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -808,6 +795,19 @@ dependencies = [
  "nostr-relay-pool",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "nostrstore"
+version = "0.1.0"
+dependencies = [
+ "nostr-sdk",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

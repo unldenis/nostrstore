@@ -1,7 +1,7 @@
 use tracing::info;
 use tracing_subscriber;
 
-use nostr_db::{
+use nostrstore::{
     DatabaseBuilder, QueryOptions,
     operation::counter::CounterEvent,
 };
