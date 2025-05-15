@@ -4,7 +4,7 @@ version = "0.2.1"
 edition = "2024"
 
 description = "nostrstore is a lightweight, decentralized key-value store designed to work seamlessly with the Nostr protocol"
-repository = "https://github.com/unldenis/nostrstore"
+repository = "https://github.com/unldenis/nostrstore/nostrstore"
 readme = "README.md"
 authors = ["Denis Mehilli <mehillideny13@gmail.com>"]
 keywords = ["nostr", "database", "p2p"]
