@@ -802,12 +802,21 @@ name = "nostrstore"
 version = "0.2.0"
 dependencies = [
  "nostr-sdk",
+ "nostrstore-derive",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "nostrstore-derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]

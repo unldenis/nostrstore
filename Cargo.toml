@@ -1,25 +1,7 @@
-[package]
-name = "nostrstore"
-version = "0.2.0"
-edition = "2024"
+[workspace]
+members = [
+    "nostrstore",
+    "nostrstore-derive"
+]
 
-description = "nostrstore is a lightweight, decentralized key-value store designed to work seamlessly with the Nostr protocol"
-repository = "https://github.com/unldenis/nostrstore"
-readme = "README.md"
-authors = ["Denis Mehilli <mehillideny13@gmail.com>"]
-keywords = ["nostr", "database", "p2p"]
-categories = ["data-structures", "database", "network-programming"]
-license = "MIT"
-
-[dependencies]
-nostr-sdk = { version = "0.41", features = ["nip44"] }
-thiserror = "2.0.12"
-tokio =  { version = "1.44.2", features = ["fs"] }
-
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-tracing = "0.1"
-tracing-subscriber = "0.3"
-
-
+resolver = "3"

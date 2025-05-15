@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use tracing::info;
 use tracing_subscriber;
 
@@ -6,6 +7,19 @@ use nostrstore::{
     operation::counter::CounterEvent,
 };
 use nostr_sdk::prelude::*;
+
+use nostrstore::AppendOnlyStream;
+
+#[derive(Debug, Serialize, Deserialize, Clone, AppendOnlyStream)]
+struct MyPerson {
+    pub name: String,
+    pub age: u8,
+}
+impl MyPerson {
+    pub fn new(name: String, age: u8) -> Self {
+        Self { name, age }
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -48,4 +62,16 @@ async fn main() {
 
     let counter = db.read_event::<CounterEvent>("my-counter").await.unwrap();
     info!("Counter: {:?}", counter);
+
+
+    db.store_event("people", MyPerson::new("Alice".to_string(), 30))
+        .await
+        .unwrap();
+
+    db.store_event("people", MyPerson::new("Bob".to_string(), 25))
+        .await
+        .unwrap();
+
+    let people : Vec<MyPerson> = db.read_event::<MyPerson>("people").await.unwrap();
+    info!("People: {:?}", people);
 }
