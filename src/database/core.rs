@@ -259,7 +259,7 @@ impl Database {
         key: I,
         operation: O,
     ) -> Result<EventId, NostrDBError> {
-        let serialized = operation.serialize();
+        let serialized = operation.serialize().map_err(|e| NostrDBError::EventStreamError(e.to_string()))?;
         self.store(key, &serialized).await
     }
 

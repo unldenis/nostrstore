@@ -22,11 +22,13 @@ impl Operation for CounterEvent {
         }
     }
 
-    fn serialize(&self) -> String {
-        match self {
-            Self::Increment => "increment".to_string(),
-            Self::Decrement => "decrement".to_string(),
-        }
+    fn serialize(&self) -> Result<String, Box<dyn std::error::Error>> {
+        Ok(
+            match self {
+                Self::Increment => "increment".to_string(),
+                Self::Decrement => "decrement".to_string(),
+            }
+        )
     }
 
     fn apply(&self, value: i64) -> i64 {
