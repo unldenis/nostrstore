@@ -1,0 +1,18 @@
+[package]
+name = "tests"
+version = "0.1.0"
+edition = "2024"
+
+
+[dependencies]
+nostrstore = "0.2.2"
+nostrstore-derive = { version = "0.1.1" }
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+tokio =  { version = "1.44.2", features = ["fs"] }
+nostr-sdk = { version = "0.41", features = ["nip44"] }

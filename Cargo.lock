@@ -811,8 +811,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "nostrstore"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "602872179ad97e37b624e319b48d18c34317ef1f7dc017793b63ca26627b3292"
+dependencies = [
+ "nostr-sdk",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "nostrstore-derive"
 version = "0.1.1"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "nostrstore-derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6acadea7b3da1d5565b4fd9a399a5a5c4a290e91438f206fa2d6a4da19fd396f"
 dependencies = [
  "quote",
  "syn",
@@ -1257,6 +1282,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "tests"
+version = "0.1.0"
+dependencies = [
+ "nostr-sdk",
+ "nostrstore 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "nostrstore-derive 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
