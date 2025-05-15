@@ -1,11 +1,11 @@
 [package]
 name = "nostrstore-derive"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 description = "nostrstore is a lightweight, decentralized key-value store designed to work seamlessly with the Nostr protocol"
-repository = "https://github.com/unldenis/nostrstore/nostrstore-derive"
-readme = "README.md"
+repository = "https://github.com/unldenis/nostrstore"
+readme = "../README.md"
 authors = ["Denis Mehilli <mehillideny13@gmail.com>"]
 keywords = ["nostr", "database", "p2p"]
 categories = ["data-structures", "database", "network-programming"]

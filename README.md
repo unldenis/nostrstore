@@ -16,7 +16,10 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-nostrstore = "0.2.0"
+nostrstore = "0.2.2"
+
+# To use nostrstore-derive macros
+nostrstore-derive = "0.1.1"
 ```
 
 ## Example
