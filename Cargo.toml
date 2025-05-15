@@ -1,6 +1,6 @@
 [package]
 name = "nostrstore"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 description = "nostrstore is a lightweight, decentralized key-value store designed to work seamlessly with the Nostr protocol"
@@ -12,7 +12,7 @@ categories = ["data-structures", "database", "network-programming"]
 license = "MIT"
 
 [dependencies]
-nostr-sdk = { version = "0.40", features = ["nip44"] }
+nostr-sdk = { version = "0.41", features = ["nip44"] }
 thiserror = "2.0.12"
 tokio =  { version = "1.44.2", features = ["fs"] }
 
