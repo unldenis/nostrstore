@@ -1,6 +1,6 @@
 [package]
 name = "nostrstore"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 
 description = "nostrstore is a lightweight, decentralized key-value store designed to work seamlessly with the Nostr protocol"
