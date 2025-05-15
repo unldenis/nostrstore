@@ -5,8 +5,9 @@ edition = "2024"
 
 
 [dependencies]
-nostrstore = "0.2.2"
-nostrstore-derive = { version = "0.1.1" }
+nostrstore = { path = "../nostrstore" }
+nostrstore-derive = { path = "../nostrstore-derive" }
+# nostrstore-derive = { version = "0.1.1" }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

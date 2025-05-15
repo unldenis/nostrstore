@@ -3,12 +3,6 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use super::Operation;
 
 
-pub struct Person {
-    pub name: String,
-    pub age: u8,
-}
-
-
 pub struct AppendOnlyEvent<T : Clone + Serialize + DeserializeOwned> {
     pub value: T,
 }

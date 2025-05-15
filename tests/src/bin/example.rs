@@ -14,6 +14,7 @@ struct MyPerson {
     pub name: String,
     pub age: u8,
 }
+
 impl MyPerson {
     pub fn new(name: String, age: u8) -> Self {
         Self { name, age }
@@ -63,11 +64,11 @@ async fn main() {
     info!("Counter: {:?}", counter);
 
 
-    db.store_event("people", MyPerson::new("Giulia".to_string(), 30))
+    db.store_event("people", MyPerson::new("Maria".to_string(), 18))
         .await
         .unwrap();
 
-    db.store_event("people", MyPerson::new("Marco".to_string(), 25))
+    db.store_event("people", MyPerson::new("Giuseppe".to_string(), 22))
         .await
         .unwrap();
 

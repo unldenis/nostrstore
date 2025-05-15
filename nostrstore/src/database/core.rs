@@ -1,8 +1,10 @@
 use std::collections::BTreeSet;
 use std::time::Duration;
 
+use hmac::Hmac;
 use nostr_sdk::prelude::*;
 use nostr_sdk::{Keys, RelayPool};
+use tracing::info;
 
 use super::query::QueryOptions;
 use super::{DatabaseBuilder, NostrRecord};
@@ -21,21 +23,69 @@ pub struct Database {
     pub relay_pool: RelayPool,
 }
 
-/// Constructs a Nostr filter for fetching events
-fn get_filter(public_key: PublicKey, key: &str, kind: u16) -> Filter {
-    Filter::new()
-        .kind(Kind::Custom(kind))
-        .author(public_key)
-        .custom_tag(
-            SingleLetterTag {
-                character: Alphabet::D,
-                uppercase: false,
-            },
-            key,
-        )
-}
+use sha2::Sha256;
+use hmac::{ Mac};
 
+// Create alias for HMAC-SHA256
+type HmacSha256 = Hmac<Sha256>;
+
+
+
+fn digest_hmac(secret_key : &SecretKey, key: &str) -> Result<String, NostrDBError>{
+    let mut mac = HmacSha256::new_from_slice(secret_key.as_secret_bytes()).map_err(|e| NostrDBError::GenerateTagError(e.to_string()))?;
+
+    mac.update(key.as_bytes());
+
+    let result = mac.finalize();
+
+    let code_bytes = result.into_bytes(); 
+
+    // code bytes to string
+    let code_bytes = hex::encode(code_bytes);
+
+    return Ok(code_bytes);
+    
+}
 impl Database {
+    /// Constructs a Nostr filter for fetching events
+    async fn get_filter(&self, key: &str, kind: u16) -> Result<Filter, NostrDBError> {
+        Ok(
+            Filter::new()
+            .kind(Kind::Custom(kind))
+            .author(self.keys.public_key)
+            .custom_tag(
+                SingleLetterTag {
+                    character: Alphabet::D,
+                    uppercase: false,
+                },
+                digest_hmac(self.keys.secret_key(), key)?,
+            )
+        )
+    }
+
+    async fn nip44_encrypt(&self, content: &str) -> Result<String, NostrDBError> {
+        let encrypted = self.keys
+            .nip44_encrypt(&self.keys.public_key, content)
+            .await
+            .map_err(|e: SignerError| NostrDBError::EncryptionError(e))?;
+        // info!("Encrypted '{}': '{}'", content, encrypted);
+        Ok(encrypted)
+    }
+
+    async fn nip44_decrypt(
+        &self,
+        pubkey: &PublicKey,
+        content: &str,
+    ) -> Result<String, NostrDBError> {
+        let decrypted = self.keys
+            .nip44_decrypt(pubkey, content)
+            .await
+            .map_err(|e| NostrDBError::DecryptionError(e))?;
+        // info!("Decrypted '{}': '{}'", content, decrypted);
+        Ok(decrypted)
+    }
+
+
     /// Constructs a new Nostr event and sends it to the relay pool.
     async fn send_event(&self, builder: EventBuilder) -> Result<EventId, NostrDBError> {
         let event = builder
@@ -106,20 +156,17 @@ impl Database {
         let events = self
             .relay_pool
             .fetch_events(
-                get_filter(self.keys.public_key, &key_str, NOSTR_STORE_KIND),
+                self.get_filter(&key_str, NOSTR_STORE_KIND).await?,
                 Duration::MAX,
                 ReqExitPolicy::default(),
             )
             .await
             .map_err(|e| NostrDBError::NostrError(e.to_string()))?;
-
+        
         let mut records = BTreeSet::new();
         for event in events {
             let content = if decrypt {
-                self.keys
-                    .nip44_decrypt(&event.pubkey, &event.content)
-                    .await
-                    .map_err(|e| NostrDBError::DecryptionError(e))?
+                self.nip44_decrypt(&event.pubkey, &event.content).await?
             } else {
                 event.content.clone()
             };
@@ -143,7 +190,7 @@ impl Database {
         let events = self
             .relay_pool
             .fetch_events(
-                get_filter(self.keys.public_key, key, NOSTR_STORE_AGGREGATE_KIND),
+                self.get_filter(key, NOSTR_STORE_AGGREGATE_KIND).await?,
                 Duration::MAX,
                 ReqExitPolicy::default(),
             )
@@ -154,11 +201,7 @@ impl Database {
             let mut records: Vec<NostrRecord> = serde_json::from_str(&event.content)?;
             if decrypt {
                 for record in &mut records {
-                    record.content = self
-                        .keys
-                        .nip44_decrypt(&event.pubkey, &record.content)
-                        .await
-                        .map_err(|e| NostrDBError::DecryptionError(e))?;
+                    record.content = self.nip44_decrypt(&event.pubkey, &record.content).await?;
                 }
             }
             Ok(records.into_iter().collect())
@@ -179,11 +222,7 @@ impl Database {
         key: T,
         content: &str,
     ) -> Result<EventId, NostrDBError> {
-        let encrypted = self
-            .keys
-            .nip44_encrypt(&self.keys.public_key, content)
-            .await
-            .map_err(|e| NostrDBError::EncryptionError(e))?;
+        let encrypted = self.nip44_encrypt(content).await?;
 
         let builder =
             EventBuilder::new(Kind::Custom(NOSTR_STORE_KIND), encrypted).tag(Tag::custom(
@@ -191,7 +230,7 @@ impl Database {
                     character: Alphabet::D,
                     uppercase: false,
                 }),
-                vec![key],
+                vec![ digest_hmac(&self.keys.secret_key(), &key.into())? ],
             ));
 
         self.send_event(builder).await

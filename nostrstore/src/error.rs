@@ -1,3 +1,4 @@
+use hmac::digest::InvalidLength;
 use thiserror::Error;
 
 use nostr_sdk::prelude::*;
@@ -32,6 +33,10 @@ pub enum NostrDBError {
     // decryption error
     #[error("Decryption error: {0}")]
     DecryptionError(SignerError),
+
+    // generate tag error
+    #[error("Generate tag error: {0}")]
+    GenerateTagError(String),
 
     #[error("Unknown error occurred")]
     Unknown,
