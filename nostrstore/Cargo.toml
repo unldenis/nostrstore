@@ -13,7 +13,6 @@ license = "MIT"
 
 [dependencies]
 # nostrstore-derive = { path = "../nostrstore-derive" }
-nostrstore-derive = { version = "0.1.0", path = "../nostrstore-derive" }
 
 nostr-sdk = { version = "0.41", features = ["nip44"] }
 thiserror = "2.0.12"

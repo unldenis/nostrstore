@@ -802,7 +802,6 @@ name = "nostrstore"
 version = "0.2.0"
 dependencies = [
  "nostr-sdk",
- "nostrstore-derive",
  "serde",
  "serde_json",
  "thiserror 2.0.12",

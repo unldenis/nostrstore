@@ -8,18 +8,16 @@ use nostrstore::{
 };
 use nostr_sdk::prelude::*;
 
-use nostrstore::AppendOnlyStream;
-
-#[derive(Debug, Serialize, Deserialize, Clone, AppendOnlyStream)]
-struct MyPerson {
-    pub name: String,
-    pub age: u8,
-}
-impl MyPerson {
-    pub fn new(name: String, age: u8) -> Self {
-        Self { name, age }
-    }
-}
+// #[derive(Debug, Serialize, Deserialize, Clone, AppendOnlyStream)]
+// struct MyPerson {
+//     pub name: String,
+//     pub age: u8,
+// }
+// impl MyPerson {
+//     pub fn new(name: String, age: u8) -> Self {
+//         Self { name, age }
+//     }
+// }
 
 #[tokio::main]
 async fn main() {
@@ -64,14 +62,14 @@ async fn main() {
     info!("Counter: {:?}", counter);
 
 
-    db.store_event("people", MyPerson::new("Alice".to_string(), 30))
-        .await
-        .unwrap();
+    // db.store_event("people", MyPerson::new("Alice".to_string(), 30))
+    //     .await
+    //     .unwrap();
 
-    db.store_event("people", MyPerson::new("Bob".to_string(), 25))
-        .await
-        .unwrap();
+    // db.store_event("people", MyPerson::new("Bob".to_string(), 25))
+    //     .await
+    //     .unwrap();
 
-    let people : Vec<MyPerson> = db.read_event::<MyPerson>("people").await.unwrap();
-    info!("People: {:?}", people);
+    // let people : Vec<MyPerson> = db.read_event::<MyPerson>("people").await.unwrap();
+    // info!("People: {:?}", people);
 }
